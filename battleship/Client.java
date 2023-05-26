@@ -19,8 +19,8 @@ public class Client {
     private BufferedWriter bufferedWriter;
     private String player;
     private boolean status = true;
-    private String phase = "preparing";
     
+    public static String phase = "preparing";
     public static int numRows = 10;
     public static int numCols = 10;
     public static int playerShips;

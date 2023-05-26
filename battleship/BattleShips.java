@@ -18,6 +18,7 @@ public class BattleShips {
     public static int numRows = 10;
     public static int numCols = 10;
     public static int playerShips;
+    public static int opponentShips;
     public static String[][] grid = new String[numRows][numCols];
     public static int[][] missedGuesses = new int[numRows][numCols];
 
@@ -121,39 +122,39 @@ public class BattleShips {
         System.out.println();
     }
 
-//     public static void playerTurn(){
-//         System.out.println("\nYOUR TURN");
-//         int x = -1, y = -1;
-//         do {
-//             Scanner input = new Scanner(System.in);
-//             System.out.print("Enter X coordinate: ");
-//             y = input.nextInt();
-//             System.out.print("Enter Y coordinate: ");
-//             x = input.nextInt();
+    public static void playerTurn(){
+        System.out.println("\nYOUR TURN");
+        int x = -1, y = -1;
+        do {
+            Scanner input = new Scanner(System.in);
+            System.out.print("Enter X coordinate: ");
+            y = input.nextInt();
+            System.out.print("Enter Y coordinate: ");
+            x = input.nextInt();
 
-//             if ((x >= 0 && x < numRows) && (y >= 0 && y < numCols)) //valid guess
-//             {
-//                 if (grid[x][y] == "x") //if computer ship is already there; computer loses ship
-//                 {
-//                     System.out.println("Boom! You sunk the ship!");
-//                     grid[x][y] = "!"; //Hit mark
-//                     --BattleShips.computerShips;
-//                 }
-//                 else if (grid[x][y] == "@") {
-//                     System.out.println("Oh no, you sunk your own ship :(");
-//                     grid[x][y] = "x";
-//                     --BattleShips.playerShips;
-//                     ++BattleShips.computerShips;
-//                 }
-//                 else if (grid[x][y] == " ") {
-//                     System.out.println("Sorry, you missed");
-//                     grid[x][y] = "-";
-//                 }
-//             }
-//             else if ((x < 0 || x >= numRows) || (y < 0 || y >= numCols))  //invalid guess
-//                 System.out.println("You can't place ships outside the " + numRows + " by " + numCols + " grid");
-//         }while((x < 0 || x >= numRows) || (y < 0 || y >= numCols));  //keep re-prompting till valid guess
-//     }
+            if ((x >= 0 && x < numRows) && (y >= 0 && y < numCols)) //valid guess
+            {
+                if (grid[x][y] == "x") //if computer ship is already there; computer loses ship
+                {
+                    System.out.println("Boom! You sunk the ship!");
+                    grid[x][y] = "!"; //Hit mark
+                    --BattleShips.computerShips;
+                }
+                else if (grid[x][y] == "@") {
+                    System.out.println("Oh no, you sunk your own ship :(");
+                    grid[x][y] = "x";
+                    --BattleShips.playerShips;
+                    ++BattleShips.computerShips;
+                }
+                else if (grid[x][y] == " ") {
+                    System.out.println("Sorry, you missed");
+                    grid[x][y] = "-";
+                }
+            }
+            else if ((x < 0 || x >= numRows) || (y < 0 || y >= numCols))  //invalid guess
+                System.out.println("You can't place ships outside the " + numRows + " by " + numCols + " grid");
+        }while((x < 0 || x >= numRows) || (y < 0 || y >= numCols));  //keep re-prompting till valid guess
+    }
 
 //     public static void computerTurn(){
 //         System.out.println("\nCOMPUTER'S TURN");
