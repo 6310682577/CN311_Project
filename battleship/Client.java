@@ -76,9 +76,9 @@ public class Client {
                                 Thread.sleep(200);
                                 createOceanMap();
                                 deployPlayerShips();
+                                status = true;
+                                phase = "Battle";
                             }
-                            status = true;
-                            phase = "Battle";
                         } catch (IOException | InterruptedException e) {
                             closeEverything(socket, bufferedReader, bufferedWriter);
                         }
