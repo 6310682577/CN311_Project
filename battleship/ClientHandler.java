@@ -15,6 +15,8 @@ public class ClientHandler implements Runnable{
     private BufferedReader bufferedReader;
     private BufferedWriter bufferedWriter;
     private String player;
+    public static int count = 0;
+    public static String[] temp; 
 
     public ClientHandler(Socket socket, int playerCount) {
         try {
@@ -25,6 +27,7 @@ public class ClientHandler implements Runnable{
             clientHandlers.add(this);
             broadcastMessage("Player " + playerCount + " has ready!");
             if (playerCount == 2) {
+                System.out.println("playerCount : " + playerCount);
                 broadcastMessage("Start");
             }
         } catch (IOException e) {
@@ -39,10 +42,36 @@ public class ClientHandler implements Runnable{
         while (socket.isConnected()) {
             try {
                 messageFromClient = bufferedReader.readLine();
-                broadcastMessage(messageFromClient);
+                // broadcastMessage(messageFromClient);
+                if (messageFromClient.equalsIgnoreCase("Finish")) {
+                    count += 1;
+                }
+                if (count == 2) {
+                    broadcastMessage("Deploy");
+                    count = 0;
+                    messageFromClient = " ";
+                }
+                if (messageFromClient.length() >= 20) {
+                    temp[0] = messageFromClient;
+                    deployShip(messageFromClient);
+                }
             } catch (IOException e) {
                 closeEverything(socket, bufferedReader, bufferedWriter);
                 break;
+            }
+        }
+    }
+
+    public void deployShip(String messagetoSend) {
+        for (ClientHandler clientHandler : clientHandlers) {
+            try {
+                if (!clientHandler.player.equals(player)) {
+                    clientHandler.bufferedWriter.write(messagetoSend);
+                    clientHandler.bufferedWriter.newLine();
+                    clientHandler.bufferedWriter.flush();
+                }
+            } catch (IOException e) {
+                closeEverything(socket, bufferedReader, bufferedWriter);
             }
         }
     }

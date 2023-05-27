@@ -9,6 +9,7 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.sql.Time;
 import java.util.Scanner;
+import java.util.concurrent.atomic.AtomicInteger;
 
 // A simple Client Server Protocol .. Client for Echo Server
 
@@ -19,18 +20,22 @@ public class Client {
     private BufferedWriter bufferedWriter;
     private String player;
     private boolean status = true;
+    private int wait = 0;
+    private static int count = 0;
+    public static String state = "send"; 
     
     public static String phase = "preparing";
     public static int numRows = 10;
     public static int numCols = 10;
-    public static int playerShips;
-    public static int opponentShips;
-    public static String playerShipList = "";
-    public static String opponentShipList = "";
-    public static String[][] playerGrid = new String[numRows][numCols];
-    public static String[][] opponentGrid = new String[numRows][numCols];
-    public static int[][] missedGuesses = new int[numRows][numCols];
+    private static int playerShips;
+    private static int opponentShips;
+    private static String playerShipList = "";
+    private static String opponentShipList = "";
+    private static String[][] playerGrid = new String[numRows][numCols];
+    private static String[][] opponentGrid = new String[numRows][numCols];
+    private static int[][] missedGuesses = new int[numRows][numCols];
 
+    // Counter counter = new Counter();
 
     public Client(Socket socket, String player) {
         try {
@@ -74,13 +79,12 @@ public class Client {
                         try {
                             status = false;
                             msgFromServer = bufferedReader.readLine();
-                            System.out.println(msgFromServer);
+                            System.out.println(msgFromServer + "\n");
                             if (msgFromServer.equalsIgnoreCase("Start")) {
                                 Thread.sleep(200);
                                 createOceanMap();
                                 deployPlayerShips();
-                                System.out.println(playerShipList);
-                                bufferedWriter.write(playerShipList);
+                                bufferedWriter.write("Finish");
                                 bufferedWriter.newLine();
                                 bufferedWriter.flush();
                                 status = true;
@@ -92,19 +96,35 @@ public class Client {
                     }
                     else if (phase.equalsIgnoreCase("StandBy")) {
                         try {
+                            // status = false;
                             msgFromServer = bufferedReader.readLine();
-                            opponentShipList = msgFromServer;
-                            System.out.println(msgFromServer);
-
+                            System.out.println(msgFromServer + "\n");
+                            if (msgFromServer.equalsIgnoreCase("Deploy")) {
+                                if (state.equalsIgnoreCase("send")) {
+                                    System.out.println(playerShipList);
+                                    bufferedWriter.write(playerShipList);
+                                    bufferedWriter.newLine();
+                                    bufferedWriter.flush();
+                                    state = "wait";
+                                }
+                                if (state.equalsIgnoreCase("wait")) {
+                                    msgFromServer = bufferedReader.readLine();
+                                    System.out.println(msgFromServer);
+                                }
+                                // opponentShipList = msgFromServer;
+                                // deployShipsToMap();
+                                phase = "Battle";
+                            }
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
                     }
                     else if (phase.equalsIgnoreCase("Battle")) {
                         try {
+                            status = false;
                             msgFromServer = bufferedReader.readLine();
                             opponentShipList = msgFromServer;
-                            deployShipsToMap();
+                            
 
                         } catch (IOException e) {
                             e.printStackTrace();
@@ -138,15 +158,15 @@ public class Client {
         System.out.println();
 
         //Middle section of Ocean Map
-        for(int i = 0; i < playerGrid.length; i++) {
-            for (int j = 0; j < playerGrid[i].length; j++) {
-                playerGrid[i][j] = " ";
+        for(int i = 0; i < opponentGrid.length; i++) {
+            for (int j = 0; j < opponentGrid[i].length; j++) {
+                opponentGrid[i][j] = " ";
                 if (j == 0)
-                    System.out.print(i + "|" + playerGrid[i][j]);
-                else if (j == playerGrid[i].length - 1)
-                    System.out.print(playerGrid[i][j] + "|" + i);
+                    System.out.print(i + "|" + opponentGrid[i][j]);
+                else if (j == opponentGrid[i].length - 1)
+                    System.out.print(opponentGrid[i][j] + "|" + i);
                 else
-                    System.out.print(playerGrid[i][j]);
+                    System.out.print(opponentGrid[i][j]);
             }
             System.out.println();
         }
@@ -174,9 +194,6 @@ public class Client {
     }
 
     public static void deployShipsToMap(){
-        Scanner input = new Scanner(System.in);
-        System.out.println("\nDeploy your ships:");
-        //Deploying five ships for player
         String[] oppShipList = opponentShipList.split("/");
         System.out.println(oppShipList);
         for (String oppShip: oppShipList ) {
@@ -184,6 +201,8 @@ public class Client {
 
             int y = Integer.parseInt(temp[0]);
             int x = Integer.parseInt(temp[1]);
+
+            System.out.println(x + " " + y);
 
             if((x >= 0 && x < numRows) && (y >= 0 && y < numCols) && (opponentGrid[x][y] == " "))
             {
@@ -256,7 +275,6 @@ public class Client {
     }
 
     public static void main(String[] args) throws UnknownHostException, IOException {
-
         System.out.println("Enter Name: ");
         Scanner scanner = new Scanner(System.in);
         String player = scanner.nextLine();
