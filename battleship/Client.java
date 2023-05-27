@@ -25,7 +25,10 @@ public class Client {
     public static int numCols = 10;
     public static int playerShips;
     public static int opponentShips;
-    public static String[][] grid = new String[numRows][numCols];
+    public static String playerShipList = "";
+    public static String opponentShipList = "";
+    public static String[][] playerGrid = new String[numRows][numCols];
+    public static String[][] opponentGrid = new String[numRows][numCols];
     public static int[][] missedGuesses = new int[numRows][numCols];
 
 
@@ -76,17 +79,32 @@ public class Client {
                                 Thread.sleep(200);
                                 createOceanMap();
                                 deployPlayerShips();
+                                System.out.println(playerShipList);
+                                bufferedWriter.write(playerShipList);
+                                bufferedWriter.newLine();
+                                bufferedWriter.flush();
                                 status = true;
-                                phase = "Battle";
+                                phase = "StandBy";
                             }
                         } catch (IOException | InterruptedException e) {
                             closeEverything(socket, bufferedReader, bufferedWriter);
                         }
                     }
+                    else if (phase.equalsIgnoreCase("StandBy")) {
+                        try {
+                            msgFromServer = bufferedReader.readLine();
+                            opponentShipList = msgFromServer;
+                            System.out.println(msgFromServer);
+
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
                     else if (phase.equalsIgnoreCase("Battle")) {
                         try {
                             msgFromServer = bufferedReader.readLine();
-                            System.out.println(msgFromServer);
+                            opponentShipList = msgFromServer;
+                            deployShipsToMap();
 
                         } catch (IOException e) {
                             e.printStackTrace();
@@ -120,15 +138,15 @@ public class Client {
         System.out.println();
 
         //Middle section of Ocean Map
-        for(int i = 0; i < grid.length; i++) {
-            for (int j = 0; j < grid[i].length; j++) {
-                grid[i][j] = " ";
+        for(int i = 0; i < playerGrid.length; i++) {
+            for (int j = 0; j < playerGrid[i].length; j++) {
+                playerGrid[i][j] = " ";
                 if (j == 0)
-                    System.out.print(i + "|" + grid[i][j]);
-                else if (j == grid[i].length - 1)
-                    System.out.print(grid[i][j] + "|" + i);
+                    System.out.print(i + "|" + playerGrid[i][j]);
+                else if (j == playerGrid[i].length - 1)
+                    System.out.print(playerGrid[i][j] + "|" + i);
                 else
-                    System.out.print(grid[i][j]);
+                    System.out.print(playerGrid[i][j]);
             }
             System.out.println();
         }
@@ -143,24 +161,35 @@ public class Client {
     public static void deployPlayerShips(){
         Scanner input = new Scanner(System.in);
         System.out.println("\nDeploy your ships:");
-        //Deploying five ships for player
         playerShips = 5;
         opponentShips = 5;
         for (int i = 1; i <= playerShips; ) {
             System.out.print("Enter (X Y) coordinate for your " + i + " ship: ");
             String inp = input.nextLine();
 
-            String[] temp = inp.split(" ");
+            playerShipList += inp + "/";
+
+            i++;
+        }
+    }
+
+    public static void deployShipsToMap(){
+        Scanner input = new Scanner(System.in);
+        System.out.println("\nDeploy your ships:");
+        //Deploying five ships for player
+        String[] oppShipList = opponentShipList.split("/");
+        System.out.println(oppShipList);
+        for (String oppShip: oppShipList ) {
+            String[] temp = oppShip.split(" ");
 
             int y = Integer.parseInt(temp[0]);
             int x = Integer.parseInt(temp[1]);
 
-            if((x >= 0 && x < numRows) && (y >= 0 && y < numCols) && (grid[x][y] == " "))
+            if((x >= 0 && x < numRows) && (y >= 0 && y < numCols) && (opponentGrid[x][y] == " "))
             {
-                grid[x][y] =  "@";
-                i++;
+                opponentGrid[x][y] =  "@";
             }
-            else if((x >= 0 && x < numRows) && (y >= 0 && y < numCols) && grid[x][y] == "@")
+            else if((x >= 0 && x < numRows) && (y >= 0 && y < numCols) && opponentGrid[x][y] == "@")
                 System.out.println("You can't place two or more ships on the same location");
             else if((x < 0 || x >= numRows) || (y < 0 || y >= numCols))
                 System.out.println("You can't place ships outside the " + numRows + " by " + numCols + " grid");
@@ -177,11 +206,11 @@ public class Client {
         System.out.println();
 
         //Middle section of Ocean Map
-        for(int x = 0; x < grid.length; x++) {
+        for(int x = 0; x < opponentGrid.length; x++) {
             System.out.print(x + "|");
 
-            for (int y = 0; y < grid[x].length; y++){
-                System.out.print(grid[x][y]);
+            for (int y = 0; y < opponentGrid[x].length; y++){
+                System.out.print(opponentGrid[x][y]);
             }
 
             System.out.println("|" + x);
@@ -205,24 +234,24 @@ public class Client {
 
             if ((x >= 0 && x < numRows) && (y >= 0 && y < numCols)) //valid guess
             {
-                if (grid[x][y] == "x") //if computer ship is already there; computer loses ship
+                if (playerGrid[x][y] == "x") //if computer ship is already there; computer loses ship
                 {
                     System.out.println("Boom! You sunk the ship!");
-                    grid[x][y] = "!"; //Hit mark
+                    playerGrid[x][y] = "!"; //Hit mark
                     --opponentShips;
                 }
-                else if (grid[x][y] == "@") {
+                else if (playerGrid[x][y] == "@") {
                     System.out.println("Oh no, you sunk your own ship :(");
-                    grid[x][y] = "x";
+                    playerGrid[x][y] = "x";
                     --playerShips;
                 }
-                else if (grid[x][y] == " ") {
+                else if (playerGrid[x][y] == " ") {
                     System.out.println("Sorry, you missed");
-                    grid[x][y] = "-";
+                    playerGrid[x][y] = "-";
                 }
             }
             else if ((x < 0 || x >= numRows) || (y < 0 || y >= numCols))  //invalid guess
-                System.out.println("You can't place ships outside the " + numRows + " by " + numCols + " grid");
+                System.out.println("You can't select outside the " + numRows + " by " + numCols + " grid");
         }while((x < 0 || x >= numRows) || (y < 0 || y >= numCols));  //keep re-prompting till valid guess
     }
 
