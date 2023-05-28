@@ -8,6 +8,8 @@ import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.sql.Time;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Scanner;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -22,18 +24,21 @@ public class Client {
     private boolean status = true;
     private int wait = 0;
     private static int count = 0;
-    private String state = " "; 
+    private String state = " ";
+    private String shoot = ""; 
     
     public static String phase = "preparing";
     public static int numRows = 10;
     public static int numCols = 10;
-    private static int playerShips;
-    private static int opponentShips;
-    private static String playerShipList = "";
-    private static String opponentShipList = "";
+    private static int playerShipsNum;
+    private static int opponentShipsNum;
+    private static String playerShips = "";
+    private static String opponentShips = "";
+    private static ArrayList<String> opponentShipList;
     private static String[][] playerGrid = new String[numRows][numCols];
     private static String[][] opponentGrid = new String[numRows][numCols];
     private static int[][] missedGuesses = new int[numRows][numCols];
+    private static ArrayList<String> inputList = new ArrayList<String>();
 
     // Counter counter = new Counter();
 
@@ -73,53 +78,79 @@ public class Client {
             @Override
             public void run() {
                 String msgFromServer;
+                Scanner scanner = new Scanner(System.in);
 
                 while (socket.isConnected()) {
                     if (phase.equalsIgnoreCase("preparing")) {
                         try {
                             status = false;
                             msgFromServer = bufferedReader.readLine();
-                            System.out.println(msgFromServer + "\n");
+                            System.out.println(msgFromServer);
                             if (msgFromServer.equalsIgnoreCase("Start")) {
                                 Thread.sleep(500);
                                 createOceanMap();
                                 deployPlayerShips();
-                                bufferedWriter.write(playerShipList);
+                                bufferedWriter.write(playerShips);
                                 bufferedWriter.newLine();
                                 bufferedWriter.flush();
-                                status = true;
+                                // status = true;
+                                phase = "Deploy";
                             }
                         } catch (IOException | InterruptedException e) {
                             closeEverything(socket, bufferedReader, bufferedWriter);
                         }
                     }
-                    else if (phase.equalsIgnoreCase("StandBy")) {
+                    if (phase.equalsIgnoreCase("Deploy")) {
                         try {
-                            // status = false;
                             msgFromServer = bufferedReader.readLine();
-                            System.out.println(msgFromServer + "\n");
-                                // System.out.println(playerShipList);
-                                // bufferedWriter.write(playerShipList);
-                                // bufferedWriter.newLine();
-                                // bufferedWriter.flush();
-                                opponentShipList = msgFromServer;
-                            deployShipsToMap();
-                            // if (msgFromServer.equalsIgnoreCase("Set")) {
-                            //     msgFromServer = bufferedReader.readLine();
-                            //     System.out.println(msgFromServer);
-                            //     phase = "Battle";
-                            // }
+                            opponentShips = msgFromServer;
+                            if (opponentShips.length() >= 10) {
+                                deployShipsToMap();
+                                phase = "Battle";
+                                System.out.println("Battle Phase");
+                            }
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
                     }
-                    else if (phase.equalsIgnoreCase("Battle")) {
+                    if (phase.equalsIgnoreCase("Battle")) {
                         try {
-                            status = false;
-                            msgFromServer = bufferedReader.readLine();
-                            opponentShipList = msgFromServer;
+                            // status = false;
+                            System.out.print("Enter (X Y) coordinate for shoot Opponent ship: ");
+                            String shoot = scanner.nextLine();
                             
+                            if (shoot.length() >= 2) {
+                                System.out.println("\n\n===================================================");
+                                shoot(shoot);
+                                bufferedWriter.write(Integer.toString(opponentShipsNum));
+                                bufferedWriter.newLine();
+                                bufferedWriter.flush();
+                                phase = "Wait";
+                                // System.out.println("Wait For Opponent");
+                            }
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    if (phase.equalsIgnoreCase("Wait")) {
+                        try {
+                            msgFromServer = bufferedReader.readLine();
+                            if (msgFromServer.equalsIgnoreCase("EndGame")) {
+                                phase = "EndPhase";
+                            }
+                            else if (msgFromServer.equalsIgnoreCase("Shoot")) {
+                                System.out.println("Shoot");
+                                phase = "Battle";
+                            }
 
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    if (phase.equalsIgnoreCase("EndPhase")) {
+                        try {
+                            msgFromServer = bufferedReader.readLine();
+                            System.out.println(msgFromServer);
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
@@ -175,38 +206,39 @@ public class Client {
     public static void deployPlayerShips(){
         Scanner input = new Scanner(System.in);
         System.out.println("\nDeploy your ships:");
-        playerShips = 5;
-        opponentShips = 5;
-        for (int i = 1; i <= playerShips; ) {
-            System.out.print("Enter (X Y) coordinate for your " + i + " ship: ");
-            String inp = input.nextLine();
+        playerShipsNum = 5;
+        opponentShipsNum = 5;
+        for (int i = 1; i <= playerShipsNum; ) {
+            
+            while (true) {
+                System.out.print("Enter (X Y) coordinate for your " + i + " ship: ");
+                String inp = input.nextLine();
+                
+                String[] temp = inp.split(" ");
+    
+                int y = Integer.parseInt(temp[0]);
+                int x = Integer.parseInt(temp[1]);
 
-            playerShipList += inp + "/";
-
+                if((x >= 0 && x < numRows) && (y >= 0 && y < numCols) && inputList.contains(inp)) {
+                    System.out.println("You can't place two or more ships on the same location");
+                }
+                else if ((x >= 0 && x < numRows) && (y >= 0 && y < numCols)) {
+                    inputList.add(inp);
+                    break;
+                }
+                else if ((x < 0 || x >= numRows) || (y < 0 || y >= numCols)) {
+                    System.out.println("You can't place ships outside the " + numRows + " by " + numCols + " grid");
+                }
+            }
             i++;
+        }
+        for (String inp: inputList) {
+            playerShips += inp + "/";
         }
     }
 
     public static void deployShipsToMap(){
-        String[] oppShipList = opponentShipList.split("/");
-        System.out.println(oppShipList);
-        for (String oppShip: oppShipList ) {
-            String[] temp = oppShip.split(" ");
-
-            int y = Integer.parseInt(temp[0]);
-            int x = Integer.parseInt(temp[1]);
-
-            System.out.println(x + " " + y);
-
-            if((x >= 0 && x < numRows) && (y >= 0 && y < numCols) && (opponentGrid[x][y] == " "))
-            {
-                opponentGrid[x][y] =  "@";
-            }
-            else if((x >= 0 && x < numRows) && (y >= 0 && y < numCols) && opponentGrid[x][y] == "@")
-                System.out.println("You can't place two or more ships on the same location");
-            else if((x < 0 || x >= numRows) || (y < 0 || y >= numCols))
-                System.out.println("You can't place ships outside the " + numRows + " by " + numCols + " grid");
-        }
+        opponentShipList = new ArrayList<String>(Arrays.asList(opponentShips.split("/")));
         printOceanMap();
     }
 
@@ -236,40 +268,26 @@ public class Client {
         System.out.println();
     }
 
-    public static void playerTurn(String input){
-        System.out.println("\nYOUR TURN");
+    public static void shoot(String input) {
         int x = -1, y = -1;
-        do {
-            String[] temp = input.split(" ");
-
-            y = Integer.parseInt(temp[0]);
-            x = Integer.parseInt(temp[1]);
-
-            if ((x >= 0 && x < numRows) && (y >= 0 && y < numCols)) //valid guess
-            {
-                if (playerGrid[x][y] == "x") //if computer ship is already there; computer loses ship
-                {
-                    System.out.println("Boom! You sunk the ship!");
-                    playerGrid[x][y] = "!"; //Hit mark
-                    --opponentShips;
-                }
-                else if (playerGrid[x][y] == "@") {
-                    System.out.println("Oh no, you sunk your own ship :(");
-                    playerGrid[x][y] = "x";
-                    --playerShips;
-                }
-                else if (playerGrid[x][y] == " ") {
-                    System.out.println("Sorry, you missed");
-                    playerGrid[x][y] = "-";
-                }
-            }
-            else if ((x < 0 || x >= numRows) || (y < 0 || y >= numCols))  //invalid guess
-                System.out.println("You can't select outside the " + numRows + " by " + numCols + " grid");
-        }while((x < 0 || x >= numRows) || (y < 0 || y >= numCols));  //keep re-prompting till valid guess
+        String[] temp = input.split(" ");
+        y = Integer.parseInt(temp[0]);
+        x = Integer.parseInt(temp[1]);
+        if (opponentShipList.contains(input)) {
+            opponentShipList.remove(input);
+            System.out.println("Boom! You sunk the ship!");
+            opponentGrid[x][y] = "x";
+            --opponentShipsNum;
+        }
+        else {
+            System.out.println("Sorry, you missed");
+            opponentGrid[x][y] = "-";
+        }
+        printOceanMap();
     }
 
     public static void main(String[] args) throws UnknownHostException, IOException {
-        System.out.println("Enter Name: ");
+        System.out.print("Enter Name: ");
         Scanner scanner = new Scanner(System.in);
         String player = scanner.nextLine();
         Socket socket = new Socket("localhost", 1234);

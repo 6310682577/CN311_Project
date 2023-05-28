@@ -13,6 +13,7 @@ import java.util.HashMap;
 public class ClientHandler implements Runnable{
 
     public static ArrayList<ClientHandler> clientHandlers = new ArrayList<>();
+    public static ArrayList<String> playerList = new ArrayList<>();
     private Socket socket;
     private BufferedReader bufferedReader;
     private BufferedWriter bufferedWriter;
@@ -21,6 +22,7 @@ public class ClientHandler implements Runnable{
     public static int count = 0;
     public static String[] temp; 
     public static String state = "Wait";
+    private static ArrayList<Integer> value = new ArrayList<>();
 
     public ClientHandler(Socket socket, int playerCount) {
         try {
@@ -29,6 +31,7 @@ public class ClientHandler implements Runnable{
             this.bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             this.player = bufferedReader.readLine();
             clientHandlers.add(this);
+            playerList.add(this.player);
             data.put(player, "Hello");
             broadcastMessage("Player " + playerCount + " has ready!");
             if (playerCount == 2) {
@@ -48,11 +51,10 @@ public class ClientHandler implements Runnable{
             try {
                 messageFromClient = bufferedReader.readLine();
                 if (state.equalsIgnoreCase("Wait")) {
-                    for (ClientHandler clientHandler : clientHandlers) { 
+                    for (ClientHandler clientHandler : clientHandlers) {
                         if (!clientHandler.player.equals(player)) {
                             data.put(player, messageFromClient);
                             count += 1;
-                            System.out.println(count);
                             if (count == 2) {
                                 state = "Deploy";
                                 count = 0;
@@ -62,9 +64,51 @@ public class ClientHandler implements Runnable{
                 }
                 if (state.equalsIgnoreCase("Deploy")) {
                     deployShip();
+                    state = "Battle";
+                    count = 0;
                 }
-                // data.forEach((key, value) -> System.out.println(key + "=" + value));
-            } catch (IOException e) {
+                if (state.equalsIgnoreCase("Battle")) {
+                    for (ClientHandler clientHandler : clientHandlers) {
+                        if (!clientHandler.player.equals(player)) {
+                            for (String players: playerList) {
+                                if (clientHandler.player == players) {
+                                    data.put(players, messageFromClient);
+                                }
+                            }
+                            count += 1;
+                            if (count == 3) {
+                                if (data.get(playerList.get(0)).equalsIgnoreCase("0") || data.get(playerList.get(1)).equalsIgnoreCase("0")) {
+                                    state = "EndGame";
+                                    System.out.println("EndGame");
+                                    broadcastMessage("EndGame");
+                                    Thread.sleep(200);
+                                }
+                                else {
+                                    broadcastMessage("Shoot");
+                                    count = 1;
+                                    data.forEach((key, value) 
+                                    -> System.out.println("Player" + key + " Ships : " + value));
+                                }
+                            }
+                        }
+                    }
+                    if (state.equalsIgnoreCase("EndGame")){
+                        System.out.println("===================================================");
+                        for (String player: playerList) {
+                            value.add(Integer.parseInt(data.get(player)));
+                        }
+                        if (value.get(0) == value.get(1)) {
+                            broadcastMessage("Draw");
+                        }
+                        else if (value.get(0) > value.get(1)) {
+                            broadcastMessage("Winner is : Player" + playerList.get(0));
+                        }
+                        else {
+                            broadcastMessage("Winner is : Player" + playerList.get(1));
+                        }
+                    }
+                }
+            } catch (IOException | InterruptedException e) {
                 closeEverything(socket, bufferedReader, bufferedWriter);
                 break;
             }
@@ -74,14 +118,13 @@ public class ClientHandler implements Runnable{
     public void deployShip() {
         for (ClientHandler clientHandler : clientHandlers) {
             try {
-                if (clientHandler.player.equals(player)) {
-                    clientHandler.bufferedWriter.write(data.get(player));
+                for (String players: playerList) {
+                    if (clientHandler.player != players)
+                    clientHandler.bufferedWriter.write(data.get(players));
                     clientHandler.bufferedWriter.newLine();
                     clientHandler.bufferedWriter.flush();
-                    System.out.println(player + " " + data.get(player));
-                    Thread.sleep(200);
                 }
-            } catch (IOException | InterruptedException e) {
+            } catch (IOException e) {
                 closeEverything(socket, bufferedReader, bufferedWriter);
             }
         }
