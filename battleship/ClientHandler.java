@@ -7,6 +7,8 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Dictionary;
+import java.util.HashMap;
 
 public class ClientHandler implements Runnable{
 
@@ -15,8 +17,10 @@ public class ClientHandler implements Runnable{
     private BufferedReader bufferedReader;
     private BufferedWriter bufferedWriter;
     private String player;
+    public static HashMap<String, String> data = new HashMap<String, String>();
     public static int count = 0;
     public static String[] temp; 
+    public static String state = "Wait";
 
     public ClientHandler(Socket socket, int playerCount) {
         try {
@@ -25,6 +29,7 @@ public class ClientHandler implements Runnable{
             this.bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             this.player = bufferedReader.readLine();
             clientHandlers.add(this);
+            data.put(player, "Hello");
             broadcastMessage("Player " + playerCount + " has ready!");
             if (playerCount == 2) {
                 System.out.println("playerCount : " + playerCount);
@@ -42,19 +47,23 @@ public class ClientHandler implements Runnable{
         while (socket.isConnected()) {
             try {
                 messageFromClient = bufferedReader.readLine();
-                // broadcastMessage(messageFromClient);
-                if (messageFromClient.equalsIgnoreCase("Finish")) {
-                    count += 1;
+                if (state.equalsIgnoreCase("Wait")) {
+                    for (ClientHandler clientHandler : clientHandlers) { 
+                        if (!clientHandler.player.equals(player)) {
+                            data.put(player, messageFromClient);
+                            count += 1;
+                            System.out.println(count);
+                            if (count == 2) {
+                                state = "Deploy";
+                                count = 0;
+                            }
+                        }
+                    }
                 }
-                if (count == 2) {
-                    broadcastMessage("Deploy");
-                    count = 0;
-                    messageFromClient = " ";
+                if (state.equalsIgnoreCase("Deploy")) {
+                    deployShip();
                 }
-                if (messageFromClient.length() >= 20) {
-                    temp[0] = messageFromClient;
-                    deployShip(messageFromClient);
-                }
+                // data.forEach((key, value) -> System.out.println(key + "=" + value));
             } catch (IOException e) {
                 closeEverything(socket, bufferedReader, bufferedWriter);
                 break;
@@ -62,15 +71,17 @@ public class ClientHandler implements Runnable{
         }
     }
 
-    public void deployShip(String messagetoSend) {
+    public void deployShip() {
         for (ClientHandler clientHandler : clientHandlers) {
             try {
-                if (!clientHandler.player.equals(player)) {
-                    clientHandler.bufferedWriter.write(messagetoSend);
+                if (clientHandler.player.equals(player)) {
+                    clientHandler.bufferedWriter.write(data.get(player));
                     clientHandler.bufferedWriter.newLine();
                     clientHandler.bufferedWriter.flush();
+                    System.out.println(player + " " + data.get(player));
+                    Thread.sleep(200);
                 }
-            } catch (IOException e) {
+            } catch (IOException | InterruptedException e) {
                 closeEverything(socket, bufferedReader, bufferedWriter);
             }
         }

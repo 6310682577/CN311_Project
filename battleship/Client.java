@@ -22,7 +22,7 @@ public class Client {
     private boolean status = true;
     private int wait = 0;
     private static int count = 0;
-    public static String state = "send"; 
+    private String state = " "; 
     
     public static String phase = "preparing";
     public static int numRows = 10;
@@ -81,14 +81,13 @@ public class Client {
                             msgFromServer = bufferedReader.readLine();
                             System.out.println(msgFromServer + "\n");
                             if (msgFromServer.equalsIgnoreCase("Start")) {
-                                Thread.sleep(200);
+                                Thread.sleep(500);
                                 createOceanMap();
                                 deployPlayerShips();
-                                bufferedWriter.write("Finish");
+                                bufferedWriter.write(playerShipList);
                                 bufferedWriter.newLine();
                                 bufferedWriter.flush();
                                 status = true;
-                                phase = "StandBy";
                             }
                         } catch (IOException | InterruptedException e) {
                             closeEverything(socket, bufferedReader, bufferedWriter);
@@ -99,22 +98,17 @@ public class Client {
                             // status = false;
                             msgFromServer = bufferedReader.readLine();
                             System.out.println(msgFromServer + "\n");
-                            if (msgFromServer.equalsIgnoreCase("Deploy")) {
-                                if (state.equalsIgnoreCase("send")) {
-                                    System.out.println(playerShipList);
-                                    bufferedWriter.write(playerShipList);
-                                    bufferedWriter.newLine();
-                                    bufferedWriter.flush();
-                                    state = "wait";
-                                }
-                                if (state.equalsIgnoreCase("wait")) {
-                                    msgFromServer = bufferedReader.readLine();
-                                    System.out.println(msgFromServer);
-                                }
-                                // opponentShipList = msgFromServer;
-                                // deployShipsToMap();
-                                phase = "Battle";
-                            }
+                                // System.out.println(playerShipList);
+                                // bufferedWriter.write(playerShipList);
+                                // bufferedWriter.newLine();
+                                // bufferedWriter.flush();
+                                opponentShipList = msgFromServer;
+                            deployShipsToMap();
+                            // if (msgFromServer.equalsIgnoreCase("Set")) {
+                            //     msgFromServer = bufferedReader.readLine();
+                            //     System.out.println(msgFromServer);
+                            //     phase = "Battle";
+                            // }
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
